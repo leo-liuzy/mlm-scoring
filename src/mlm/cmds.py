@@ -15,6 +15,7 @@ import mxnet as mx
 # PyTorch-based
 import torch
 import transformers
+from pdb import set_trace as bp
 
 from .loaders import Predictions, Corpus, ScoredCorpus
 from .models import get_pretrained, SUPPORTED
@@ -194,7 +195,6 @@ def cmd_score(args: argparse.Namespace) -> None:
     # Redirect console output from GluonNLP downloading models
     with _stdout_to_stderr():
         model, vocab, tokenizer = get_pretrained(ctxs, args.model, weights_file, regression=args.no_mask)
-
     # Set scorer
     if MLMScorer._check_support(model):
         # GluonNLP
@@ -222,7 +222,7 @@ def cmd_score(args: argparse.Namespace) -> None:
         logging.warn("# of hypotheses: {}".format(len(corpus)))
 
     elif args.mode == 'ref':
-
+        # bp()
         corpus = Corpus.from_file(args.infile, max_utts=args.max_utts)
         logging.warn("# sentences: {}".format(len(corpus)))
 

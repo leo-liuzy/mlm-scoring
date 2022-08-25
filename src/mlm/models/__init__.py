@@ -11,6 +11,7 @@ from gluonnlp.model import get_model as _get_model
 # PyTorch-based
 import torch
 import transformers
+from pdb import set_trace as bp
 
 from .gpt2 import gpt2_117m, gpt2_345m
 from .bert import BERTRegression, AlbertForMaskedLMOptimized, BertForMaskedLMOptimized, DistilBertForMaskedLMOptimized
@@ -90,7 +91,7 @@ def get_pretrained(ctxs: List[mx.Context], name: str = 'bert-base-en-uncased', p
         logging.warn("Model '{}' not recognized as an MXNet model; treating as PyTorch model".format(name))
         model_fullname = name
         model_name = model_fullname.split('/')[-1]
-
+        # bp()
         if model_name.startswith('albert-'):
 
             if params_file is None:
@@ -141,7 +142,12 @@ def get_pretrained(ctxs: List[mx.Context], name: str = 'bert-base-en-uncased', p
             #     }
             # )
             # model.load_state_dict(new_state_dict)
-
+        elif 'roberta' in model_fullname:
+            # bp()
+            model, loading_info = transformers.RobertaForMaskedLM.from_pretrained(model_fullname, output_loading_info=True)
+            tokenizer = transformers.RobertaTokenizer.from_pretrained("roberta-base")
+            vocab = None
+            
         else:
             raise ValueError("Model '{}' is not currently a supported PyTorch model".format(name))
 
@@ -206,7 +212,7 @@ def get_pretrained(ctxs: List[mx.Context], name: str = 'bert-base-en-uncased', p
             for i in range(freeze):
                 model.encoder.transformer_cells[i].collect_params().setattr('grad_req', 'null')
 
-            # Wrapper if appropriate
+            # Wrapper if appropriat
             if regression:
                 # NOTE THIS:
                 model = BERTRegression(model, dropout=0.1)

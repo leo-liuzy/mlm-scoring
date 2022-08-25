@@ -98,23 +98,22 @@ subject_verb_agreement = {
     'regular_plural_subject_verb_agreement_2'
 }
 
-anaphor_agreement_list = []
-argument_structure_list = []
-binding_list = []
-control_raising_list = []
-determiner_noun_agreement_list = []
-ellipsis_list = []
-filler_gap_list = []
-irregular_forms_list = []
-island_effects_list = []
-npi_licensing_list = []
-quantifiers_list = []
-subject_verb_agreement_list = []
 
-
-if __name__ == '__main__':
-
-    base_dir = Path(sys.argv[1])
+def get_blimp_acc(base_dir, print_result=False):
+    base_dir = Path(base_dir)
+    
+    anaphor_agreement_list = []
+    argument_structure_list = []
+    binding_list = []
+    control_raising_list = []
+    determiner_noun_agreement_list = []
+    ellipsis_list = []
+    filler_gap_list = []
+    irregular_forms_list = []
+    island_effects_list = []
+    npi_licensing_list = []
+    quantifiers_list = []
+    subject_verb_agreement_list = []
 
     num_files = 0
 
@@ -138,7 +137,8 @@ if __name__ == '__main__':
         assert num_pairs == 1000
 
         acc = count / num_pairs
-        print("{:.3f} ({}/{}) - {}".format(acc, count, num_pairs, uid))
+        if print_result:
+            print("{:.3f} ({}/{}) - {}".format(acc, count, num_pairs, uid))
         if uid in anaphor_agreement:
             anaphor_agreement_list.append(acc)
         elif uid in argument_structure:
@@ -166,26 +166,47 @@ if __name__ == '__main__':
         else:
             logging.error("Unrecognized UID: {}".format(uid))
         num_files += 1
-
-    print("# of files: {}".format(num_files))
+        
 
     # Since all 67 classes have 1000 pairs, per-class and overall accuracies are the desired (micro)averages
-
-    print("anaphor_agreement: ", np.mean(anaphor_agreement_list))
-    print("argument_structure: ", np.mean(argument_structure_list))
-    print("binding: ", np.mean(binding_list))
-    print("control_raising: ", np.mean(control_raising_list))
-    print("determiner: ", np.mean(determiner_noun_agreement_list))
-    print("ellipsis: ", np.mean(ellipsis_list))
-    print('filler_gap: ', np.mean(filler_gap_list))
-    print('irregular_forms: ', np.mean(irregular_forms_list))
-    print('island_effects: ', np.mean(island_effects_list))
-    print('npi_licensing: ', np.mean(npi_licensing_list))
-    print('quantifiers: ', np.mean(quantifiers_list))
-    print('subject_verb_agreement: ', np.mean(subject_verb_agreement_list))
+    content = []
+    content.append(['anaphor_agreement', np.mean(anaphor_agreement_list)])
+    content.append(['argument_structure', np.mean(argument_structure_list)])
+    content.append(['binding', np.mean(binding_list)])
+    content.append(['control_raising', np.mean(control_raising_list)])
+    content.append(['determiner', np.mean(determiner_noun_agreement_list)])
+    content.append(['ellipsis', np.mean(ellipsis_list)])
+    content.append(['filler_gap', np.mean(filler_gap_list)])
+    content.append(['irregular_forms', np.mean(irregular_forms_list)])
+    content.append(['island_effects', np.mean(island_effects_list)])
+    content.append(['npi_licensing', np.mean(npi_licensing_list)])
+    content.append(['quantifiers', np.mean(quantifiers_list)])
+    content.append(['subject_verb_agreement', np.mean(subject_verb_agreement_list)])
+    
+        # print("anaphor_agreement: ", np.mean(anaphor_agreement_list))
+        # print("argument_structure: ", np.mean(argument_structure_list))
+        # print("binding: ", np.mean(binding_list))
+        # print("control_raising: ", np.mean(control_raising_list))
+        # print("determiner: ", np.mean(determiner_noun_agreement_list))
+        # print("ellipsis: ", np.mean(ellipsis_list))
+        # print('filler_gap: ', np.mean(filler_gap_list))
+        # print('irregular_forms: ', np.mean(irregular_forms_list))
+        # print('island_effects: ', np.mean(island_effects_list))
+        # print('npi_licensing: ', np.mean(npi_licensing_list))
+        # print('quantifiers: ', np.mean(quantifiers_list))
+        # print('subject_verb_agreement: ', np.mean(subject_verb_agreement_list))
+    
+    
 
     lists = anaphor_agreement_list + argument_structure_list + binding_list + control_raising_list + determiner_noun_agreement_list + ellipsis_list + filler_gap_list + irregular_forms_list + island_effects_list + npi_licensing_list + quantifiers_list + subject_verb_agreement_list
 
     assert len(lists) == num_files
+    content.append(['overall', np.mean(lists)])
+    if print_result:
+        print("# of files: {}".format(num_files))
+        for t, avg_acc in content:
+            print(f"{t}: {avg_acc}")
+    return content
 
-    print("overall: ", np.mean(lists))
+if __name__ == '__main__':
+    get_blimp_acc(sys.argv[1], print_result=True)

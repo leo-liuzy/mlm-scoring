@@ -15,10 +15,11 @@ from mxnet.gluon.data import SimpleDataset
 import torch
 import transformers
 from . import batchify as btf_generic
+from pdb import set_trace as bp
 
 from .loaders import Corpus, ScoredCorpus
 from .models import SUPPORTED_MLMS, SUPPORTED_LMS
-from .models.bert import BERTRegression, AlbertForMaskedLMOptimized, BertForMaskedLMOptimized, DistilBertForMaskedLMOptimized
+from .models.bert import BERTRegression, AlbertForMaskedLMOptimized, BertForMaskedLMOptimized, DistilBertForMaskedLMOptimized, RobertaForMaskedLM, RobertaForMaskedLMOptimized
 from .models.gpt2 import GPT2Model
 
 
@@ -563,6 +564,7 @@ class MLMScorerPT(BaseScorer):
         torch.cuda.manual_seed_all(0)
         # TODO: This does not restrict to specific GPUs however, use CUDA_VISIBLE_DEVICES?
         # TODO: It also unnecessarily locks the GPUs to each other
+        # bp()
         self._model.to(self._device)
         self._model = torch.nn.DataParallel(self._model, device_ids=[0])
         self._model.eval()
@@ -570,7 +572,7 @@ class MLMScorerPT(BaseScorer):
 
     @staticmethod
     def _check_support(model) -> bool:
-        return isinstance(model, transformers.XLMWithLMHeadModel) or isinstance(model, transformers.BertForMaskedLM) or isinstance(model, AlbertForMaskedLMOptimized) or isinstance(model, BertForMaskedLMOptimized) or isinstance(model, DistilBertForMaskedLMOptimized)
+        return isinstance(model, transformers.XLMWithLMHeadModel) or isinstance(model, transformers.BertForMaskedLM) or isinstance(model, AlbertForMaskedLMOptimized) or isinstance(model, BertForMaskedLMOptimized) or isinstance(model, DistilBertForMaskedLMOptimized) or isinstance(model, RobertaForMaskedLM)
 
 
     def _ids_to_masked(self, token_ids: np.ndarray) -> List[Tuple[np.ndarray, List[int]]]:
@@ -646,6 +648,7 @@ class MLMScorerPT(BaseScorer):
         # https://github.com/dmlc/gluon-nlp/blame/b1b61d3f90cf795c7b48b6d109db7b7b96fa21ff/src/gluonnlp/data/sampler.py#L398
         # batch_sampler = nlp.data.sampler.FixedBucketSampler([sent_tuple[2] for sent_tuple in dataset], batch_size=split_size, ratio=ratio, num_shards=len(self._ctxs), shuffle=False)
         # Hence, we use num_shards = 0 and do gluon's split_data
+        # bp()
         batch_sampler = nlp.data.sampler.FixedBucketSampler([sent_tuple[2] for sent_tuple in dataset], batch_size=split_size, ratio=ratio, num_shards=0, shuffle=False)
 
         logging.info(batch_sampler.stats())
@@ -715,8 +718,21 @@ class MLMScorerPT(BaseScorer):
                     token_masked_ids = token_masked_ids.to(ctx)
 
                     split_size = token_ids.shape[0]
-
-                    if isinstance(self._model.module, AlbertForMaskedLMOptimized) or \
+                    if isinstance(self._model.module, RobertaForMaskedLM):
+                        alen = torch.arange(token_ids.shape[1], dtype=torch.long)
+                        alen = alen.to(ctx)
+                        mask = alen < valid_length[:, None]
+                        # try:
+                        out = self._model(input_ids=token_ids, attention_mask=mask)
+                        # bp()
+                        # except:
+                            # bp()
+                            # out = self._model(input_ids=token_ids, attention_mask=mask)
+                        # out[0] is what contains the distribution for the masked (batch_size, sequence_length, config.vocab_size)
+                        # Reindex to only get the distributions at the masked positions (batch_size, config.vocab_size)
+                        out = out[0][list(range(split_size)), masked_positions.reshape(-1),:]
+                    
+                    elif isinstance(self._model.module, AlbertForMaskedLMOptimized) or \
                         isinstance(self._model.module, BertForMaskedLMOptimized) or \
                         isinstance(self._model.module, DistilBertForMaskedLMOptimized):
                         # Because BERT does not take a length parameter
@@ -763,6 +779,7 @@ class MLMScorerPT(BaseScorer):
             # See In[21] in https://jakevdp.github.io/PythonDataScienceHandbook/02.07-fancy-indexing.html.
             # Hence, aggregation is done synchronously, every so often
             # (though batch_score_accumulation = 1 seems best, since bucketing is effective in reducing GPU disparity)
+            # bp()
             if len(batch_sent_idxs_per_ctx[0]) == batch_score_accumulation:   
                 sum_accumulated_scores()
 
